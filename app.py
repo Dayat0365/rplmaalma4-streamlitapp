@@ -7,10 +7,12 @@ import plotly.graph_objects as go
 import requests
 import math
 
-UBIDOTS_TOKEN = "BBUS-bCeXbZIXQc3thUXVhD2urYOTXXMuGp"
-DEVICE_LABEL = "rpl-maalma-4"
-VARIABLE_LABEL = "soil_moisture" 
-UBIDOTS_URL = f"https://industrial.api.ubidots.com/api/v1.6/devices/{DEVICE_LABEL}/{VARIABLE_LABEL}/lv"
+UBIDOTS_TOKEN = "BBUS-R2zm9miwHkGOtTp5NGFC3sfyqnLopm"
+DEVICE_LABEL = "water-pump"
+VARIABLE_MOIST = "soil_moisture"
+VARIABLE_PUMPSTATUS = "pump_status"
+UBIDOTS_MOIST = f"https://industrial.api.ubidots.com/api/v1.6/devices/{DEVICE_LABEL}/{VARIABLE_MOIST}/lv"
+UBIDOTS_PUMPSTATUS = f"https://industrial.api.ubidots.com/api/v1.6/devices/{DEVICE_LABEL}/{VARIABLE_PUMPSTATUS}/lv"
 
 # Simulasi database untuk menyimpan data kelembaban
 if 'moisture_data' not in st.session_state:
@@ -37,14 +39,16 @@ st.write("Sistem irigasi cerdas berbasis IoT dan AI untuk pertanian berkelanjuta
 if st.button("Perbarui Data"):
 
     headers = {"X-Auth-Token": UBIDOTS_TOKEN}
-    response = requests.get(UBIDOTS_URL, headers=headers)
-    moistureFloat = float(response.text)
-    moisturePercentage = math.floor(100 - (100 * (moistureFloat / 4095)))
-    st.success(f"Data Terakhir(Angka) : {moistureFloat}, Data Terakhir(Persentase) : {moisturePercentage}%, Status Pompa : {moisturePercentage < 55 and "HIDUP" or "MATI"}")
-    pump_status = moisturePercentage < 55
+    response_moist = requests.get(UBIDOTS_MOIST, headers=headers)
+    response_pumpstatus = requests.get(UBIDOTS_PUMPSTATUS, headers=headers)
+    moistureValue = int(float(response_moist.text))
+    pumpstatusValue = int(float(response_pumpstatus.text))
+    st.success(f"Data Terakhir : {moistureValue}%, Status Pompa : {pumpstatusValue > 0 and "HIDUP" or "MATI"}")
+    pump_status = pumpstatusValue > 0
 
-    update_data(moisturePercentage, pump_status)
-    response.close()
+    update_data(moistureValue, pump_status)
+    response_moist.close()
+    response_pumpstatus.close()
 
     moisture = np.random.uniform(20, 80)  # Simulasi kelembaban tanah
       # Pompa aktif jika kelembaban di bawah 30%
@@ -69,4 +73,4 @@ if st.session_state.moisture_data:
     else:
         st.success("Kelembaban tanah dalam kondisi optimal.")
 else:
-    st.info("Belum ada data tersedia. Klik 'Perbarui Data' untuk memulai simulasi.")
+    st.info("Belum ada data tersedia. Klik 'Perbarui Data' untuk mengambil data.")
